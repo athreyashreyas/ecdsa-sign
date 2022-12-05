@@ -1,70 +1,134 @@
 <!DOCTYPE html>
 <html>
 
-  <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <link rel="stylesheet" type="text/css" media="screen" href= "{{ url_for('static',filename='stylesheets/stylesheet.css') }}">
+<head>
+    <meta charset='utf-8'/>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1"/>
+    <link rel="stylesheet" type="text/css" media="screen"
+          href="{{ url_for('static',filename='stylesheets/stylesheet.css') }}">
     <title>ECDSA sample</title>
-  </head>
+</head>
 
-  <body>
-    
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <h1 id="project_title">ECDSA sample</h1>
-          <h2 id="project_tagline">generating EC keypair, signing and verifying ECDSA signature</h2> 
-        </header>
-    </div>
+<body>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-
-<!-- now editing -->
-<form name="form1">
-<h4>(Step1) choose supported EC curve name and generate key pair</h4>
-ECC curve name: 
-<select name="curve1">
-<option value="secp256k1">secp256k1
-</select><br/>
-<input type="button" value="generate EC key pair" onClick="doGenerate();"/><br/>
-<p>
-EC private key: <input type="text" name="prvkey1" value="" size="100"/><br/>
-EC public key: <input type="text" name="pubkey1" value="" size="100"/><br/>
-</p>
-
-<!-- ============================================================== -->
-
-<h4>(Step2) Sign message</h4>
-Signature Algorithm: 
-<select name="sigalg1">
-<option value="SHA256withECDSA">SHA256withECDSA
-</select><br/>
-
-Message string to be signed: 
-<input type="text" name="msg1" value="BITS F463" size="100"/><br/>
-<input type="button" value="sign message" onClick="doSign();"/><br/>
-<p>
-Signature value: <input type="text" name="sigval1" value="" size="100"/><br/>
-</p>
-
-<h4>(Step3) Verify signature</h4>
-<input type="button" value="verify it!" onClick="doVerify();"/>
-<input type="reset" value="reset"/>
-
-</form>
-
-<!-- now editing -->
-
-      </section>
-    </div>
-
-    <!-- FOOTER  -->
+<!-- HEADER -->
+<div id="header_wrap" class="outer">
+    <header class="inner">
+        <h1 id="project_title">ECDSA sample</h1>
+        <h2 id="project_tagline">generating EC keypair, signing and verifying ECDSA signature</h2>
+    </header>
 </div>
-      </footer>
-    </div>
 
-  </body>
+<!-- MAIN CONTENT -->
+<div id="main_content_wrap" class="outer">
+    <section id="main_content" class="inner">
+
+        <!-- now editing -->
+        <form name="form1">
+            <h4>(Step1) choose supported EC curve name and generate key pair</h4>
+            ECC curve name:
+            <select name="curve1">
+                <option value="secp256k1">secp256k1
+            </select><br/>
+            <input type="button" value="generate EC key pair" onClick="doGenerate();"/><br/>
+            <p>
+                EC private key: <input type="text" name="prvkey1" value="" size="100"/><br/>
+                EC public key: <input type="text" name="pubkey1" value="" size="100"/><br/>
+            </p>
+
+            <!-- ============================================================== -->
+
+            <h4>(Step2) Sign message</h4>
+            Signature Algorithm:
+            <select name="sigalg1">
+                <option value="SHA256withECDSA">SHA256withECDSA
+            </select><br/>
+
+            Message string to be signed:
+            <input type="text" name="msg1" value="BITS F463" size="100"/><br/>
+            <input type="button" value="sign message" onClick="doSign();"/><br/>
+            <p>
+                Signature value: <input type="text" name="sigval1" value="" size="100"/><br/>
+            </p>
+
+            <h4>(Step3) Verify signature</h4>
+            <input type="button" value="verify it!" onClick="doVerify();"/>
+            <input type="reset" value="reset"/>
+
+        </form>
+
+        <!-- now editing -->
+
+    </section>
+</div>
+
+<!-- FOOTER  -->
+</div>
+</footer>
+</div>
+
+</body>
+
+<script>
+    function doGenerate() {
+        // get method, with no params, to get a random keypair
+        fetch("/generate_keys")
+            .then(response => response.json())
+            .then(responseJson => {
+                priv = responseJson["private_key"]
+                pub = responseJson["public_key"]
+                // fill the input form with returned values from backend
+                document.form1.prvkey1.value = responseJson.private_key;
+                document.form1.pubkey1.value = responseJson.public_key;
+            })
+    }
+
+    function doSign() {
+        // read priv key, msg from input form
+        private_key = document.form1.prvkey1.value;
+        message = document.form1.msg1.value;
+        post_data = JSON.stringify({private_key, message})
+
+        // post method, with form data, to sign the message
+        fetch("/sign", {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: post_data,
+        })
+            .then(response => response.json())
+            .then(responseJson => {
+                // fill the input form with returned values from backend
+                document.form1.sigval1.value = responseJson.signature;
+            })
+    }
+
+    function doVerify() {
+        // read priv key, msg, sig from input form
+        // (we'll regenerate pub key in backend)
+        private_key = document.form1.prvkey1.value;
+        message = document.form1.msg1.value;
+        signature = {c: document.form1.sigval1.value.split(",")[0], d: document.form1.sigval1.value.split(",")[1]};
+        post_data = JSON.stringify({private_key, message, signature})
+
+        // post method to verify the signature
+        fetch("/verify", {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: post_data,
+        })
+            .then(response => response.json())
+            .then(responseJson => {
+                // alert with returned value from backend
+                console.log(responseJson)
+                alert(`signature verified? : ${responseJson["validation"]}`)
+            })
+    }
+
+
+</script>
+
 </html>

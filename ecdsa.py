@@ -4,12 +4,14 @@ from math import ceil, log
 from random import randint
 from typing import NamedTuple
 
-#Bitcoin ECDSA curve
+# Bitcoin ECDSA curve
 secp256k1_data = dict(
-    p=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F,  # Field characteristic
+    # Field characteristic
+    p=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F,
     a=0x0,  # Curve param a
     b=0x7,  # Curve param b
-    r=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,  # Order n of basepoint G. Cofactor is 1 so it's ommited.
+    # Order n of basepoint G. Cofactor is 1 so it's ommited.
+    r=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,
     Gx=0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,  # Base point x
     Gy=0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8,  # Base point y
 )
@@ -17,10 +19,12 @@ secp256k1_data = dict(
 secp256k1 = namedtuple("secp256k1", secp256k1_data)(**secp256k1_data)
 assert (secp256k1.Gy ** 2 - secp256k1.Gx ** 3 - 7) % secp256k1.p == 0
 
+
 class CurveFP(NamedTuple):
     p: int  # Field characteristic
     a: int  # Curve param a
     b: int  # Curve param b
+
 
 def extended_gcd(aa, bb):
     lastremainder, remainder = abs(aa), abs(bb)
@@ -33,11 +37,13 @@ def extended_gcd(aa, bb):
         y, lasty = lasty - quotient * y, y
     return lastremainder, lastx * (-1 if aa < 0 else 1), lasty * (-1 if bb < 0 else 1)
 
+
 def modinv(a, m):
     g, x, _ = extended_gcd(a, m)
     if g != 1:
         raise ValueError
     return x % m
+
 
 class PointEC(NamedTuple):
     curve: CurveFP
@@ -113,13 +119,16 @@ class PointEC(NamedTuple):
     def __rmul__(self, other):
         return self.__mul__(other)
 
+
 class ECCSetup(NamedTuple):
     E: CurveFP
     G: PointEC
     r: int
 
+
 secp256k1_curve = CurveFP(secp256k1.p, secp256k1.a, secp256k1.b)
 secp256k1_basepoint = PointEC(secp256k1_curve, secp256k1.Gx, secp256k1.Gy)
+
 
 class ECDSAPrivKey(NamedTuple):
     ecc_setup: ECCSetup
@@ -131,13 +140,16 @@ class ECDSAPrivKey(NamedTuple):
         pub = ECDSAPubKey(self.ecc_setup, W)
         return pub
 
+
 class ECDSAPubKey(NamedTuple):
     ecc_setup: ECCSetup
     W: PointEC
 
+
 class ECDSASignature(NamedTuple):
     c: int
     d: int
+
 
 def generate_keypair(ecc_setup, s=None):
     # Select a random integer s in the interval [1, r - 1] for the secret.
@@ -147,8 +159,10 @@ def generate_keypair(ecc_setup, s=None):
     pub = priv.get_pubkey()
     return priv, pub
 
+
 def get_msg_hash(msg):
     return int.from_bytes(sha256(msg).digest(), "big")
+
 
 def sign(priv, msg, u=None):
     G = priv.ecc_setup.G
@@ -177,6 +191,7 @@ def sign(priv, msg, u=None):
 
     signature = ECDSASignature(c, d)
     return signature
+
 
 def verify_signature(pub, msg, signature):
     r = pub.ecc_setup.r
@@ -208,6 +223,7 @@ def verify_signature(pub, msg, signature):
     rv = c1 == c
     return rv
 
+
 def get_ecc_setup(curve=None, basepoint=None, r=None):
     if curve is None:
         curve = secp256k1_curve
@@ -227,9 +243,11 @@ def get_ecc_setup(curve=None, basepoint=None, r=None):
     ecc_setup = ECCSetup(E, G, r)
     return ecc_setup
 
+
 def main():
     ecc_setup = get_ecc_setup()
-    print(f"E: y^2 = x^3 + {ecc_setup.E.a}x + {ecc_setup.E.b} (mod {ecc_setup.E.p})")
+    print(
+        f"E: y^2 = x^3 + {ecc_setup.E.a}x + {ecc_setup.E.b} (mod {ecc_setup.E.p})")
     print(f"base point G({ecc_setup.G.x}, {ecc_setup.G.y})")
     print(f"order(G, E) = {ecc_setup.r}")
 
@@ -240,7 +258,8 @@ def main():
 
     msg_orig = b"hello world"
     signature = sign(priv, msg_orig)
-    print(f"signature ({msg_orig}, priv) = (c,d) = {signature.c}, {signature.d}")
+    print(
+        f"signature ({msg_orig}, priv) = (c,d) = {signature.c}, {signature.d}")
 
     validation = verify_signature(pub, msg_orig, signature)
     print(f"verify_signature(pub, {msg_orig}, signature) = {validation}")
