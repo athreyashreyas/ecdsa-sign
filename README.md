@@ -2,5 +2,5 @@
 A simple website implementing Elliptic Curve Digital Signatures to sign and verify messages using Flask and Python 
 
 
-#dependencies needed
+<h3>Dependencies Needed</h3>
 install python and flask on your machine and run the program by running "python main.py" in the project directory.
